@@ -70,7 +70,7 @@ def deg_to_pixel_coordinates(lat_deg, lon_deg, zoom):
 import luigi
 class mainTask(luigi.Task):
     mesh_data = luigi.Parameter(default="./data/D00_population/population_mesh_third_half.csv")
-    output_db = luigi.Parameter(default="./var/N00population_mesh_third_half_mesh.db")
+    output_db = luigi.Parameter(default="./var/N00_population_mesh_third_half_mesh.db")
     def output(self):
         return luigi.LocalTarget(self.output_db)
     def run(self):
@@ -127,7 +127,7 @@ class mainTask(luigi.Task):
         quadkey_mesh = resampled_mesh * array_third_mesh_population.sum() / resampled_mesh.sum()
 
         # DB準備
-        conn = sqlite3.connect(self.output_db)
+        conn = sqlite3.connect(self.output().fn)
         cur = conn.cursor()
 
         # TABLE作成

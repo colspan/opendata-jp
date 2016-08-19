@@ -1,0 +1,5 @@
+luigi
+sympy
+quadkey
+numpy
+scipy
