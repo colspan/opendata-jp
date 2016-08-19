@@ -48,11 +48,11 @@ import requests
 import json
 import random
 
-ROUTE_URL_TEMPLATE = 'http://localhost:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
-ROUTE_URL_TEMPLATE2 = 'http://192.168.11.48:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
+ROUTE_URL_TEMPLATE1 = 'http://localhost:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
+ROUTE_URL_TEMPLATE2 = 'http://192.168.11.49:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
 
 def search_and_sort_places_by_duration(lat, lon, targets):
-    route_urls = [ROUTE_URL_TEMPLATE] + [ROUTE_URL_TEMPLATE2]*4 # 負荷分散
+    route_urls = [ROUTE_URL_TEMPLATE2] # + [ROUTE_URL_TEMPLATE1]*4 # 負荷分散
     results = []
     for i, row in enumerate(targets):
         server = random.sample(route_urls)
