@@ -53,7 +53,7 @@ ROUTE_URL_TEMPLATE1 = 'http://localhost:5000/route/v1/driving/{start_long},{star
 ROUTE_URL_TEMPLATE2 = 'http://192.168.11.49:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
 
 def search_and_sort_places_by_duration(lat, lon, targets):
-    route_urls = [ROUTE_URL_TEMPLATE2]# + [ROUTE_URL_TEMPLATE2]*4 # 負荷分散
+    route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*2 # 負荷分散
     results = []
     for i, row in enumerate(targets):
         server = random.choice(route_urls)
@@ -166,7 +166,7 @@ class generateDb(luigi.Task):
             )""".format(self.target_name)
         cur.execute(ddl)
 
-        dml = """INSERT OR IGNORE INTO hospitals_brain(
+        dml = """INSERT OR IGNORE INTO hospitals_{}(
                 'qkey',
                 'latitude',
                 'longtitude',
@@ -174,10 +174,10 @@ class generateDb(luigi.Task):
                 'duration',
                 'distance_path',
                 'distance_straight_line')
-                VALUES (?, ?, ?, ?, ?, ?, ?)"""
+                VALUES (?, ?, ?, ?, ?, ?, ?)""".format(self.target_name)
 
         for tile_data_file in self.input():
-            with open(tile_data_file, 'r') as f:
+            with open(tile_data_file.fn, 'r') as f:
                 result_data = pickle.load(f)
 
             tile_x = result_data["tile_x"]
@@ -197,6 +197,8 @@ class generateDb(luigi.Task):
                         distance_path = None
                         hospital_id = None
                         distance_straight_line = None
+                    if hospital_id == None:
+                        continue
                     qkey = quadkey.from_geo((lat,lon), QUADKEY_LEVEL).key
                     cur.execute(dml, (qkey, lat, lon, hospital_id, duration, distance_path, distance_straight_line))
 
@@ -240,4 +242,4 @@ class mainTask(luigi.WrapperTask):
         return tasks
 
 if __name__ == "__main__":
-    luigi.run(['mainTask', '--workers=10', '--local-scheduler'])
+    luigi.run(['mainTask', '--workers=12', '--local-scheduler'])
