@@ -90,3 +90,6 @@ ENV/
 
 !.gitkeep
 var/*
+**/zip/*.zip
+**/download/*.xls*
+**/var/*.csv

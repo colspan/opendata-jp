@@ -3,3 +3,5 @@ sympy
 quadkey
 numpy
 scipy
+pandas
+xlsx2csv
