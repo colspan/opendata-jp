@@ -47,6 +47,21 @@ def mesh_code_to_latlng(mesh_code):
     longtitude = float(mesh_code[2:4])+100.0 + float(mesh_code[5])*1.0/8.0 + float(mesh_code[7])*1.0/8.0/10.0 + half_lon
     return (latitude, longtitude)
 
+def mesh_code_to_latlng_index(mesh_code):
+    if len(mesh_code) == 9:
+        # 1/2メッシュコード
+        half_lat = (int(mesh_code[8])-1)/2 
+        half_lon = (int(mesh_code[8])-1)%2
+    else:
+        # 3次メッシュコード
+        half_lat = 0
+        half_lon = 0
+    latitude = int(mesh_code[0:2])*8*10*2 + int(mesh_code[4])*10*2 + int(mesh_code[6])*2 + half_lat
+    longtitude = int(mesh_code[2:4])*8*10*2 + int(mesh_code[5])*10*2 + int(mesh_code[7])*2 + half_lon
+    return (latitude, longtitude)
+
+
+
 def deg_to_num(lat_deg, lon_deg, zoom):
     lat_rad = radians(lat_deg)
     n = 2.0 ** zoom
@@ -64,6 +79,20 @@ def deg_to_pixel_coordinates(lat_deg, lon_deg, zoom):
     pixel_x = int(((lon_deg + 180.0) / 360.0) * 256 * n)
     pixel_y = int((0.5-log((1.0+sin_lat)/(1.0-sin_lat))/(4.0*pi))*256 * n)
     return (pixel_x, pixel_y)
+
+
+from PIL import Image, ImageDraw, ImageFont
+def draw_matrix(input_array, filename):
+    img = Image.new('RGBA', input_array.shape, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    max_value = input_array.max()
+    for y, row in enumerate(input_array):
+        for x, value in enumerate(row):
+            c = int( 255 * value / max_value ) * 30
+            draw.rectangle( ((x,y),(x+1,y+1)), fill=(c,c,c,255) )
+    img.save(filename, 'PNG')
+    
 
 # ==============
 
@@ -104,8 +133,13 @@ class T00mainTask(luigi.Task):
         array_third_mesh_population = np.zeros(mesh_nums[0]*mesh_nums[1]).reshape(mesh_nums[0],mesh_nums[1])
 
         # 統計値代入
+        lat_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[2]))[0] )[0]
+        lon_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[3]))[0] )[1]
         for x in stat_third_mesh_population.values():
-            array_third_mesh_population[get_index_lat(x[2]),get_index_lon(x[3])] = x[1]
+            lat_index , lon_index = mesh_code_to_latlng_index(x[0])
+            array_third_mesh_population[lat_index - lat_index_min, lon_index - lon_index_min] = x[1]
+
+        draw_matrix(array_third_mesh_population, './var/T00_mesh_code_map.png' )
 
         # quadkey空間におけるピクセル数算出
         zoom = 8
