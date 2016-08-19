@@ -119,11 +119,13 @@ class T00mainTask(luigi.Task):
         area_lat_min = min(stat_third_mesh_population.values(), key=(lambda x : x[2]))[2]
         area_lon_max = max(stat_third_mesh_population.values(), key=(lambda x : x[3]))[3]
         area_lon_min = min(stat_third_mesh_population.values(), key=(lambda x : x[3]))[3]
+        lat_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[2]))[0] )[0]
+        lon_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[3]))[0] )[1]
         #print (area_lat_max,area_lat_min,area_lon_max,area_lon_min)
 
         # 位置計算関数作成 (度から秒に換算した上で割る, 1/2メッシュなので2を掛ける)
         get_index_lat = lambda x : int((x - area_lat_min)*3600.0*2.0/30.0 + 1.0) # quadkeyの視点は北西、1/2メッシュの視点は南西なのでインデックスがずれる
-        get_index_lon = lambda x : int((x - area_lon_min)*3600.0*2.0/45.0)
+        get_index_lon = lambda x : int((x - area_lon_min)*3600.0*2.0/45.0 )
 
         # メッシュ数計算
         mesh_nums = (get_index_lat(area_lat_max)+1, get_index_lon(area_lon_max)+1)
@@ -133,8 +135,6 @@ class T00mainTask(luigi.Task):
         array_third_mesh_population = np.zeros(mesh_nums[0]*mesh_nums[1]).reshape(mesh_nums[0],mesh_nums[1])
 
         # 統計値代入
-        lat_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[2]))[0] )[0]
-        lon_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[3]))[0] )[1]
         for x in stat_third_mesh_population.values():
             lat_index , lon_index = mesh_code_to_latlng_index(x[0])
             array_third_mesh_population[lat_index - lat_index_min, lon_index - lon_index_min] = x[1]
@@ -148,7 +148,7 @@ class T00mainTask(luigi.Task):
         pixel_nums = (pixel_sw[1] - pixel_ne[1] + 1, pixel_ne[0] - pixel_sw[0] + 1) # h*w
         print pixel_nums
         # リサンプリング比率計算
-        zoom_ratio = (float(pixel_nums[0])/float(mesh_nums[0]),float(pixel_nums[1])/float(mesh_nums[1]))
+        zoom_ratio = (float(pixel_nums[0])/float(mesh_nums[0]-1),float(pixel_nums[1])/float(mesh_nums[1]-1))
         print zoom_ratio
 
         # リサンプリング実行
