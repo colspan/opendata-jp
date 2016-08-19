@@ -68,7 +68,7 @@ def deg_to_pixel_coordinates(lat_deg, lon_deg, zoom):
 # ==============
 
 import luigi
-class mainTask(luigi.Task):
+class T00mainTask(luigi.Task):
     mesh_data = luigi.Parameter(default="./data/D00_population/population_mesh_third_half.csv")
     output_db = luigi.Parameter(default="./var/N00_population_mesh_third_half_mesh.db")
     def output(self):
@@ -170,4 +170,4 @@ class mainTask(luigi.Task):
         conn.close()
 
 if __name__ == "__main__":
-    luigi.run(['mainTask', '--workers=1', '--local-scheduler'])
+    luigi.run(['T00mainTask', '--workers=1', '--local-scheduler'])

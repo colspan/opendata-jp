@@ -6,7 +6,8 @@ import copy
 import luigi
 import pickle
 import quadkey
-
+import pandas
+import sqlite3
 
 import math
 def deg2num(lat_deg, lon_deg, zoom):
@@ -52,10 +53,10 @@ ROUTE_URL_TEMPLATE1 = 'http://localhost:5000/route/v1/driving/{start_long},{star
 ROUTE_URL_TEMPLATE2 = 'http://192.168.11.49:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
 
 def search_and_sort_places_by_duration(lat, lon, targets):
-    route_urls = [ROUTE_URL_TEMPLATE2] # + [ROUTE_URL_TEMPLATE1]*4 # 負荷分散
+    route_urls = [ROUTE_URL_TEMPLATE2]# + [ROUTE_URL_TEMPLATE2]*4 # 負荷分散
     results = []
     for i, row in enumerate(targets):
-        server = random.sample(route_urls)
+        server = random.choice(route_urls)
         route_url = server.format(**{'start_lat':lat, 'start_long':lon ,'end_lat':row['latitude'], 'end_long':row['longtitude']})
         r = requests.get(route_url)
         route_data =  json.loads(r.content)
@@ -85,15 +86,21 @@ TILE_SIZE = 256
 
 # -------------------------------------------
 
+import T00PopulationIndex
+
 class generateDistanceEachTiles(luigi.Task):
     zoom = luigi.Parameter()
     x = luigi.Parameter()
     y = luigi.Parameter()
-    filename = luigi.Parameter()
+    target_name = luigi.Parameter()
     hospitals = luigi.ListParameter() # 病院名簿
     distance_threshold = luigi.FloatParameter(default=300.0) #300km以内の病院のみ
+    def requires(self):
+        return T00PopulationIndex.T00mainTask()
     def output(self):
-        return luigi.LocalTarget(self.filename)
+        combination = {'zoom':self.zoom,'x':self.x,'y':self.y,'target':self.target_name}
+        pkl_file = './var/tmp_N02_{target}_{zoom}_{x}_{y}.pkl'.format(**combination)
+        return luigi.LocalTarget(pkl_file)
     def run(self):
         tile_x = self.x
         tile_y = self.y
@@ -101,19 +108,31 @@ class generateDistanceEachTiles(luigi.Task):
         size_x, size_y = (IMG_X, IMG_Y)
         target_list = self.hospitals
 
+        conn = sqlite3.connect(self.input().fn)
+        cur = conn.cursor()
+
         result_data = {"zoom":zoom, "tile_x":tile_x, "tile_y":tile_y, "distance_straight_line":[[{} for i in range(size_x)] for j in range(size_y)], "distance_path":[[{} for i in range(size_x)] for j in range(size_y)], "duration":[[{} for i in range(size_x)] for j in range(size_y)]}
         for img_y in range(0, size_y):
             for img_x in range(0, size_x):
+                print "{} : {}, {} / {}, {}".format(self.output().fn, img_x, img_y, size_x, size_y)
                 # 1ピクセル分
                 current_pos = num2deg(tile_x + float(img_x)/size_x, tile_y + float(img_y)/size_y, zoom)
+
+                ## 人口メッシュにデータが有る場合のみ続行する
+                qkey = quadkey.from_geo(current_pos, QUADKEY_LEVEL).key
+                cur.execute('select qkey from population_mesh where qkey = ?', (qkey,))
+                if cur.fetchone() == None:
+                    continue
+
                 result = search_and_sort_places_by_distance(*(current_pos+(target_list,)))
-                result_data["distance_straight_line"][img_y][img_x] = [{'id':x['id'],'value':x['distance_straight_line']} for x in result]
-                result = search_and_sort_places_by_duration(*(current_pos+([x for x in target_list if x['distance_straight_line'] <= self.distance_threshold],))) # 近いものに絞って時間距離を求める
+                result_data["distance_straight_line"][img_y][img_x] = [{'id':x['id'],'value':x['distance']} for x in result]
+                result = search_and_sort_places_by_duration(*(current_pos+([x for x in target_list if x['distance'] <= self.distance_threshold],))) # 近いものに絞って時間距離を求める
                 result_data["duration"][img_y][img_x] = [{'id':x['id'],'value':x['duration']} for x in result]
                 result_data["distance_path"][img_y][img_x] = [{'id':x['id'],'value':x['distance']} for x in result]
-                print "{} : {}, {} / {}, {}".format(self.filename, img_x, img_y, size_x, size_y)
         with self.output().open('w') as f:
             pickle.dump(result_data, f, pickle.HIGHEST_PROTOCOL)
+
+        conn.close()
 
 class generateDb(luigi.Task):
     target_name = luigi.Parameter()
@@ -127,10 +146,7 @@ class generateDb(luigi.Task):
         tasks = []
         for tile_x in range(edge_nw_x, edge_se_x+1):
             for tile_y in range(edge_nw_y, edge_se_y+1):
-                # タイル1枚分
-                combination = {'zoom':zoom,'x':tile_x,'y':tile_y}
-                pkl_file = './var/tmp_N02_{zoom}_{x}_{y}.pkl'.format(**combination)
-                tasks.append(generateDistanceEachTiles(x=tile_x, y=tile_y, zoom=zoom, filename=pkl_file, hospitals=self.hospitals))
+                tasks.append(generateDistanceEachTiles(x=tile_x, y=tile_y, zoom=zoom, target_name=self.target_name, hospitals=self.hospitals))
         return tasks
     def output(self):
         return luigi.LocalTarget(self.output_db)
@@ -224,4 +240,4 @@ class mainTask(luigi.WrapperTask):
         return tasks
 
 if __name__ == "__main__":
-    luigi.run(['mainTask', '--workers=8'])
+    luigi.run(['mainTask', '--workers=10', '--local-scheduler'])
