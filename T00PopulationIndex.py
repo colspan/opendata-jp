@@ -70,7 +70,7 @@ def deg_to_pixel_coordinates(lat_deg, lon_deg, zoom):
 import luigi
 class T00mainTask(luigi.Task):
     mesh_data = luigi.Parameter(default="./data/D00_population/population_mesh_third_half.csv")
-    output_db = luigi.Parameter(default="./var/N00_population_mesh_third_half_mesh.db")
+    output_db = luigi.Parameter(default="./var/T00_population_mesh_third_half_mesh.db")
     def output(self):
         return luigi.LocalTarget(self.output_db)
     def run(self):

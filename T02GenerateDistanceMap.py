@@ -136,7 +136,7 @@ class generateDistanceEachTiles(luigi.Task):
 
 class generateDb(luigi.Task):
     target_name = luigi.Parameter()
-    output_db = luigi.Parameter(default="./var/N02_hospital_distance_map.db")
+    output_db = luigi.Parameter(default="./var/T02_hospital_distance_map.db")
     hospitals = luigi.ListParameter()
     def requires(self):
         zoom = ZOOM
@@ -234,7 +234,7 @@ class mainTask(luigi.WrapperTask):
         # タスク生成
         tasks = []
         for k,v in target_lists.items():
-            task = generateDb(target_name=k, output_db="./var/N02_hospital_distance_map_{}.db".format(k),hospitals=v)
+            task = generateDb(target_name=k, output_db="./var/T02_hospital_distance_map_{}.db".format(k),hospitals=v)
             tasks.append(task)
 
         return tasks

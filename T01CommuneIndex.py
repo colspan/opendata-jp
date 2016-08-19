@@ -96,7 +96,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 class mainTask(luigi.Task):
     mesh_data = luigi.Parameter(default="./data/D01_geomap/hokkaido.json")
-    output_db = luigi.Parameter(default="./var/N01_commune_quadkey_map.db")
+    output_db = luigi.Parameter(default="./var/T01_commune_quadkey_map.db")
     def output(self):
         return luigi.LocalTarget(self.output_db)
     def run(self):
