@@ -61,14 +61,9 @@ def search_and_sort_places_by_duration(lat, lon, targets):
         r = requests.get(route_url)
         route_data =  json.loads(r.content)
         if route_data['code'] == 'Ok':
-            # 経路の一番目が遠過ぎたら無限大にする 海や山の中と考えられる
-            first_pos = route_data['routes'][0]['legs'][0]['steps'][0]['maneuver']['location']
-            if dist_on_sphere((lat,lon), (first_pos[1],first_pos[0])) < 1.2: #1.2km
-                duration = route_data['routes'][0]['duration']
-            else:
-                duration = 1000 * 60 * 60
+            duration = route_data['routes'][0]['duration']
         else:
-            duration = 1000 * 60 * 60
+            duration = None
         row['duration'] = duration
         results.append(row)
     list_durations = sorted(results, key=lambda x:x['duration'])
