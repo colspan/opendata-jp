@@ -9,3 +9,6 @@ http://download.geofabrik.de/asia/japan.html
 OSRM Backend
 https://github.com/Project-OSRM/osrm-backend
 
+### 地図データ展開方法
+
+https://github.com/Project-OSRM/osrm-backend/wiki/Running-OSRM

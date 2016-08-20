@@ -29,7 +29,7 @@ class ConvertToCSV(luigi.Task):
         target = self.target
         i = self.sheet
         filename_csv = "../var/{}_{}_{:02d}.csv".format(target["name"],target["year"],(int(target["subname"].split('-')[0])+i))
-        filename_extracted = "../var/extracted_{}_{}_{:02d}.csv".format(target["name"],target["year"],(int(target["subname"].split('-')[0])+1))
+        filename_extracted = "../var/extracted_{}_{}_{:02d}.csv".format(target["name"],target["year"],(int(target["subname"].split('-')[0])+i))
         return [luigi.LocalTarget(filename_csv), luigi.LocalTarget(filename_extracted)]       
     def run(self):
         target = self.target
