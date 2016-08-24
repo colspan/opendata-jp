@@ -94,7 +94,7 @@ class generateDistanceEachTiles(luigi.Task):
         return T00PopulationIndex.T00mainTask()
     def output(self):
         combination = {'zoom':self.zoom,'x':self.x,'y':self.y,'target':self.target_name}
-        pkl_file = './var/tmp_N02_{target}_{zoom}_{x}_{y}.pkl'.format(**combination)
+        pkl_file = './var/tmp_T02_{target}_{zoom}_{x}_{y}.pkl'.format(**combination)
         return luigi.LocalTarget(pkl_file)
     def run(self):
         tile_x = self.x
@@ -225,7 +225,7 @@ class mainTask(luigi.WrapperTask):
 
         target_lists["brain"] = []
         for i, row in df_hospital.iterrows():
-            if row['brain_ambulance'].find('○') >= 0:
+            if row['brain_ambulance'] == '○':
                 target_lists["brain"].append(row.T.to_dict())
 
         # タスク生成
