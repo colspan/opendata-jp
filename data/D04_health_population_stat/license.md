@@ -13,9 +13,9 @@
 
 http://www.pref.hokkaido.lg.jp/hf/sum/hoso/hotou/hotou01/nenpou.htm
 
-### 人口統計
+### 人口統計 [年齢５歳階級別人口（Excel）]
 
-
+http://www.pref.hokkaido.lg.jp/ss/scs/gyousei/shityousondata.htm
 
 ## 加工者
 

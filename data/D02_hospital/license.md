@@ -34,3 +34,6 @@ http://github.com/colspan
 
 2. 分娩取り扱い産婦人科名簿を下記文書をもとに手作業で合成
    - http://www.pref.hokkaido.lg.jp/hf/cis/shyusankikeikakuH26.pdf
+
+3. 脳卒中の急性期医療を担う医療機関一覧をもとに手作業で合成
+   - http://www.pref.hokkaido.lg.jp/hf/cis/iryokeikaku/dai8syou/beppyou-03.pdf

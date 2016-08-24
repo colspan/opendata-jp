@@ -225,7 +225,7 @@ class mainTask(luigi.WrapperTask):
 
         target_lists["brain"] = []
         for i, row in df_hospital.iterrows():
-            if row['services'].find('脳') >= 0:
+            if row['brain_ambulance'].find('○') >= 0:
                 target_lists["brain"].append(row.T.to_dict())
 
         # タスク生成
