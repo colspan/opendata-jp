@@ -240,18 +240,24 @@ class generateHospitalDistanceMap(luigi.WrapperTask):
 
 
 class generateAirportDistanceMap(luigi.WrapperTask):
-    hospital_list_csv = luigi.Parameter(default='./data/D05_airport/airport_list.csv')
+    airport_list_csv = luigi.Parameter(default='./data/D05_airport/airport_list.csv')
     def requires(self):
-        df_hospital = pandas.read_csv(self.hospital_list_csv)
+        df_airport = pandas.read_csv(self.airport_list_csv)
+        df_airport["longtitude"] =  df_airport["longtitude"].astype("float")
+        df_airport["latitude"] =  df_airport["latitude"].astype("float")
 
         # リストに代入
-        for i, row in df_hospital.iterrows():
-            target_list = row.T.to_dict()
+        target_list = []
+        for i, row in df_airport.iterrows():
+            target_list.append(row.T.to_dict())
 
         # タスク生成
         task = generateDb(target_name="all_airports", table_name="airports", output_db="./var/T02_airport_distance_map.db", hospitals=target_list)
 
         return task
+
+
+
 
 if __name__ == "__main__":
     luigi.run()#['--workers=12', '--local-scheduler'])
