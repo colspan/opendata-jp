@@ -50,10 +50,11 @@ import json
 import random
 
 ROUTE_URL_TEMPLATE1 = 'http://localhost:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
-ROUTE_URL_TEMPLATE2 = 'http://192.168.11.49:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
+ROUTE_URL_TEMPLATE2 = 'http://192.168.11.48:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
 
 def search_and_sort_places_by_duration(lat, lon, targets):
-    route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*2 # 負荷分散
+    #route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*2 # 負荷分散
+    route_urls = [ROUTE_URL_TEMPLATE2]
     results = []
     for i, row in enumerate(targets):
         server = random.choice(route_urls)
@@ -133,6 +134,7 @@ class generateDb(luigi.Task):
     target_name = luigi.Parameter()
     output_db = luigi.Parameter(default="./var/T02_hospital_distance_map.db")
     hospitals = luigi.ListParameter()
+    table_name = luigi.Parameter()
     def requires(self):
         zoom = ZOOM
         edge_nw_x, edge_nw_y = deg2num( *(EDGE_NW+(zoom,)) )
@@ -150,7 +152,7 @@ class generateDb(luigi.Task):
 
         conn = sqlite3.connect(self.output().fn)
         cur = conn.cursor()
-        ddl = """CREATE TABLE IF NOT EXISTS hospitals_{}(
+        ddl = """CREATE TABLE IF NOT EXISTS {}(
             qkey TEXT PRIMARY KEY,
             latitude FLOAT,
             longtitude FLOAT,
@@ -158,10 +160,10 @@ class generateDb(luigi.Task):
             duration FLOAT,
             distance_path FLOAT,
             distance_straight_line FLOAT
-            )""".format(self.target_name)
+            )""".format(self.table_name)
         cur.execute(ddl)
 
-        dml = """INSERT OR IGNORE INTO hospitals_{}(
+        dml = """INSERT OR IGNORE INTO {}(
                 'qkey',
                 'latitude',
                 'longtitude',
@@ -169,7 +171,7 @@ class generateDb(luigi.Task):
                 'duration',
                 'distance_path',
                 'distance_straight_line')
-                VALUES (?, ?, ?, ?, ?, ?, ?)""".format(self.target_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""".format(self.table_name)
 
         for tile_data_file in self.input():
             with open(tile_data_file.fn, 'r') as f:
@@ -201,7 +203,7 @@ class generateDb(luigi.Task):
         conn.close()
             
 
-class mainTask(luigi.WrapperTask):
+class generateHospitalDistanceMap(luigi.WrapperTask):
     hospital_list_csv = luigi.Parameter(default='./data/D02_hospital/hospital_list.csv')
     def requires(self):
         df_hospital = pandas.read_csv(self.hospital_list_csv)
@@ -231,10 +233,31 @@ class mainTask(luigi.WrapperTask):
         # タスク生成
         tasks = []
         for k,v in target_lists.items():
-            task = generateDb(target_name=k, output_db="./var/T02_hospital_distance_map_{}.db".format(k),hospitals=v)
+            task = generateDb(target_name=k, table_name="hospitals_{}".format(k), output_db="./var/T02_hospital_distance_map_{}.db".format(k),hospitals=v)
             tasks.append(task)
 
         return tasks
 
+
+class generateAirportDistanceMap(luigi.WrapperTask):
+    airport_list_csv = luigi.Parameter(default='./data/D05_airport/airport_list.csv')
+    def requires(self):
+        df_airport = pandas.read_csv(self.airport_list_csv)
+        df_airport["longtitude"] =  df_airport["longtitude"].astype("float")
+        df_airport["latitude"] =  df_airport["latitude"].astype("float")
+
+        # リストに代入
+        target_list = []
+        for i, row in df_airport.iterrows():
+            target_list.append(row.T.to_dict())
+
+        # タスク生成
+        task = generateDb(target_name="all_airports", table_name="airports", output_db="./var/T02_airport_distance_map.db", hospitals=target_list)
+
+        return task
+
+
+
+
 if __name__ == "__main__":
-    luigi.run(['mainTask', '--workers=12', '--local-scheduler'])
+    luigi.run()#['--workers=12', '--local-scheduler'])
