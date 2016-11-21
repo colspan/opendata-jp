@@ -17,7 +17,7 @@ conn = sqlite3.connect(args.output)
 cur = conn.cursor()
 
 # TABLE作成
-ways_ddl = """CREATE TABLE IF NOT EXISTS way_names(
+ways_ddl = """CREATE TABLE IF NOT EXISTS ways(
     osmid INTEGER PRIMARY KEY,
     name_ja TEXT,
     refs TEXT
@@ -25,13 +25,13 @@ ways_ddl = """CREATE TABLE IF NOT EXISTS way_names(
 cur.execute(ways_ddl)
 
 # ways_dml
-ways_dml = """INSERT OR IGNORE INTO way_names(
+ways_dml = """INSERT OR IGNORE INTO ways(
         'osmid',
         'name_ja',
         'refs')
         VALUES (?, ?, ?)"""
 
-nodes_ddl = """CREATE TABLE IF NOT EXISTS node_names(
+nodes_ddl = """CREATE TABLE IF NOT EXISTS nodes(
     osmid INTEGER PRIMARY KEY,
     name_ja TEXT,
     refs TEXT
@@ -39,13 +39,13 @@ nodes_ddl = """CREATE TABLE IF NOT EXISTS node_names(
 cur.execute(nodes_ddl)
 
 # nodes_dml
-nodes_dml = """INSERT OR IGNORE INTO node_names(
+nodes_dml = """INSERT OR IGNORE INTO nodes(
         'osmid',
         'name_ja',
         'refs')
         VALUES (?, ?, ?)"""
 
-coords_ddl = """CREATE TABLE IF NOT EXISTS coord_names(
+coords_ddl = """CREATE TABLE IF NOT EXISTS coords(
     osmid INTEGER PRIMARY KEY,
     qkey TEXT,
     longitude FLOAT,
@@ -53,10 +53,10 @@ coords_ddl = """CREATE TABLE IF NOT EXISTS coord_names(
     )"""
 cur.execute(coords_ddl)
 # INDEX
-cur.execute("CREATE INDEX IF NOT EXISTS coord_names_qkey ON coord_names(qkey)")
+cur.execute("CREATE INDEX IF NOT EXISTS coords_qkey ON coords(qkey)")
 
 # coords_dml
-coords_dml = """INSERT OR IGNORE INTO coord_names(
+coords_dml = """INSERT OR IGNORE INTO coords(
         'osmid',
         'qkey',
         'longitude',
