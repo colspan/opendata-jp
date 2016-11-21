@@ -19,6 +19,7 @@ cur = conn.cursor()
 # TABLE作成
 ways_ddl = """CREATE TABLE IF NOT EXISTS ways(
     osmid INTEGER PRIMARY KEY,
+    name TEXT,
     name_ja TEXT,
     refs TEXT
     )"""
@@ -27,12 +28,14 @@ cur.execute(ways_ddl)
 # ways_dml
 ways_dml = """INSERT OR IGNORE INTO ways(
         'osmid',
+        'name',
         'name_ja',
         'refs')
-        VALUES (?, ?, ?)"""
+        VALUES (?, ?, ?, ?)"""
 
 nodes_ddl = """CREATE TABLE IF NOT EXISTS nodes(
     osmid INTEGER PRIMARY KEY,
+    name TEXT,
     name_ja TEXT,
     refs TEXT
     )"""
@@ -41,9 +44,10 @@ cur.execute(nodes_ddl)
 # nodes_dml
 nodes_dml = """INSERT OR IGNORE INTO nodes(
         'osmid',
+        'name',
         'name_ja',
         'refs')
-        VALUES (?, ?, ?)"""
+        VALUES (?, ?, ?, ?)"""
 
 coords_ddl = """CREATE TABLE IF NOT EXISTS coords(
     osmid INTEGER PRIMARY KEY,
@@ -66,12 +70,28 @@ coords_dml = """INSERT OR IGNORE INTO coords(
 class NameFetcher(object):
     def ways(self, ways):
         for osmid, tags, refs in ways:
-            if 'name:ja' in tags and len(refs) > 0 :
-                cur.execute(ways_dml, (osmid, tags['name:ja'], ",".join([str(x) for x in refs])))
+            if 'name' in tags:
+                name = tags['name']
+            else:
+                name = None
+            if 'name:ja' in tags:
+                name_ja = tags['name:ja']
+            else:
+                name_ja = None
+            if len(refs) > 0 :
+                cur.execute(ways_dml, (osmid, name, name_ja, ",".join([str(x) for x in refs])))
     def nodes(self, nodes):
         for osmid, tags, refs in nodes:
-            if 'name:ja' in tags > 0 :
-                cur.execute(nodes_dml, (osmid, tags['name:ja'], ",".join([str(x) for x in refs])))
+            if 'name' in tags:
+                name = tags['name']
+            else:
+                name = None
+            if 'name:ja' in tags:
+                name_ja = tags['name:ja']
+            else:
+                name_ja = None
+            if len(refs) > 0 :
+                cur.execute(nodes_dml, (osmid, name, name_ja, ",".join([str(x) for x in refs])))
     def coords(self, coords):
         for osmid, lon, lat in coords:
             qkey =  quadkey.from_geo((lat,lon), 16).key
