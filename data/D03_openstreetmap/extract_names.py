@@ -1,7 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from imposm.parser import OSMParser
+from imposm.parser import OSMParser # https://imposm.org/docs/imposm.parser/latest/install.html
+# apt-get install build-essential python-dev protobuf-compiler libprotobuf-dev
 import sqlite3
 import quadkey
 
