@@ -16,56 +16,48 @@ args = p.parse_args()
 conn = sqlite3.connect(args.output)
 cur = conn.cursor()
 
-# TABLE作成
+# ways
 ways_ddl = """CREATE TABLE IF NOT EXISTS way_names(
-    osmid INTEGER PRIMARY KEY,
-    name TEXT,
-    name_ja TEXT,
-    refs TEXT
+    id INTEGER PRIMARY KEY,
+    name TEXT
     )"""
 cur.execute(ways_ddl)
-
-# ways_dml
 ways_dml = """INSERT OR IGNORE INTO way_names(
-        'osmid',
-        'name',
-        'name_ja',
-        'refs')
-        VALUES (?, ?, ?, ?)"""
+    'id',
+    'name')
+    VALUES (?, ?)"""
 
-nodes_ddl = """CREATE TABLE IF NOT EXISTS node_names(
-    osmid INTEGER PRIMARY KEY,
-    name TEXT,
-    name_ja TEXT,
-    refs TEXT
+
+# way_node
+way_node_ddl = """CREATE TABLE IF NOT EXISTS way_node(
+    way_id INTEGER,
+    node_id INTEGER
     )"""
-cur.execute(nodes_ddl)
+cur.execute(way_node_ddl)
+way_node_dml = """INSERT OR IGNORE INTO way_node(
+    'way_id',
+    'node_id')
+    VALUES (?, ?)"""
 
-# nodes_dml
-nodes_dml = """INSERT OR IGNORE INTO node_names(
-        'osmid',
-        'name',
-        'name_ja',
-        'refs')
-        VALUES (?, ?, ?, ?)"""
-
-coords_ddl = """CREATE TABLE IF NOT EXISTS coord_names(
-    osmid INTEGER PRIMARY KEY,
+# nodes
+nodes_ddl = """CREATE TABLE IF NOT EXISTS node_names(
+    id INTEGER PRIMARY KEY,
+    name TEXT,
     qkey TEXT,
     longitude FLOAT,
     latitude FLOAT
     )"""
-cur.execute(coords_ddl)
+cur.execute(nodes_ddl)
+nodes_dml = """INSERT OR IGNORE INTO node_names(
+    'id',
+    'name',
+    'qkey',
+    'longitude',
+    'latitude'
+    )
+    VALUES (?, ?, ?, ?, ?)"""
 # INDEX
-cur.execute("CREATE INDEX IF NOT EXISTS coord_names_qkey ON coord_names(qkey)")
-
-# coords_dml
-coords_dml = """INSERT OR IGNORE INTO coord_names(
-        'osmid',
-        'qkey',
-        'longitude',
-        'latitude')
-        VALUES (?, ?, ?, ?)"""
+cur.execute("CREATE INDEX IF NOT EXISTS node_names_qkey ON node_names(qkey)")
 
 class NameFetcher(object):
     def ways(self, ways):
@@ -75,35 +67,33 @@ class NameFetcher(object):
             else:
                 name = None
             if 'name:ja' in tags:
-                name_ja = tags['name:ja']
-            else:
-                name_ja = None
+                name = tags['name:ja']
             if len(refs) > 0 :
-                cur.execute(ways_dml, (osmid, name, name_ja, ",".join([str(x) for x in refs])))
+                cur.execute(ways_dml, (osmid, name))
+                for ref in refs:
+                    cur.execute(way_node_dml, (osmid, ref))
+                    
     def nodes(self, nodes):
-        for osmid, tags, refs in nodes:
+        for osmid, tags, coord in nodes:
             if 'name' in tags:
                 name = tags['name']
             else:
                 name = None
             if 'name:ja' in tags:
-                name_ja = tags['name:ja']
-            else:
-                name_ja = None
-            if len(refs) > 0 :
-                cur.execute(nodes_dml, (osmid, name, name_ja, ",".join([str(x) for x in refs])))
-    def coords(self, coords):
-        for osmid, lon, lat in coords:
+                name = tags['name:ja']
+            lon, lat = coord
             qkey =  quadkey.from_geo((lat,lon), 16).key
-            cur.execute(coords_dml, (osmid, qkey, lon, lat))
+            cur.execute(nodes_dml, (osmid, name, qkey, lon, lat))
 
 # instantiate counter and parser and start parsing
 name_fetcher = NameFetcher()
-p = OSMParser(  concurrency=4,
-                ways_callback=name_fetcher.ways,
-                nodes_callback=name_fetcher.nodes,
-                coords_callback=name_fetcher.coords )
-p.parse(args.input)
+p1 = OSMParser(  concurrency=4,
+                nodes_callback=name_fetcher.nodes )
+p1.parse(args.input)
+
+p2 = OSMParser(  concurrency=4,
+                ways_callback=name_fetcher.ways )
+p2.parse(args.input)
 
 
 # DB を確定
