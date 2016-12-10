@@ -43,5 +43,31 @@ with open(args.roaddef, 'r') as f:
 
 conn.close()
 
-#for name, ways in names.items():
-#    print name
+for name, ways in names.items():
+    # 各路線ごとに
+    joined_pairs = []
+    print name.encode('utf-8')
+    for way_id, nodes in ways.items():
+        # 連結するwayを探す
+        ## 始点
+        start_node = nodes.items()[0]
+        pair_way_id_s = None
+        for wid, nds in ways.items():
+            if wid == way_id:
+                continue
+            if nds.items()[0][0] == start_node[0]:
+                pair_way_id_s = (wid, 'start') 
+            if nds.items()[-1][0] == start_node[0]:
+                pair_way_id_s = (wid, 'end') 
+        ## 終点
+        end_node = nodes.items()[-1]
+        pair_way_id_e = None
+        for wid, nds in ways.items():
+            if wid == way_id:
+                continue
+            if nds.items()[0][0] == end_node[0]:
+                pair_way_id_e = (wid, 'start') 
+            if nds.items()[-1][0] == end_node[0]:
+                pair_way_id_e = (wid, 'end') 
+        joined_pairs.append((way_id, pair_way_id_s, pair_way_id_e))
+    print joined_pairs
