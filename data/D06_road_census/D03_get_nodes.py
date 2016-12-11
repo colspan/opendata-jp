@@ -45,7 +45,7 @@ conn.close()
 
 for name, ways in names.items():
     # 各路線ごとに
-    joined_pairs = []
+    joined_pairs = {}
     print name.encode('utf-8')
     for way_id, nodes in ways.items():
         # 連結するwayを探す
@@ -69,5 +69,45 @@ for name, ways in names.items():
                 pair_way_id_e = (wid, 'start') 
             if nds.items()[-1][0] == end_node[0]:
                 pair_way_id_e = (wid, 'end') 
-        joined_pairs.append((way_id, pair_way_id_s, pair_way_id_e))
-    print joined_pairs
+        joined_pairs[way_id] = (pair_way_id_s, pair_way_id_e)
+    # Noneが片方だけのペアを探す
+    pairs_includes_none = []
+    for wid, jp in joined_pairs.items():
+        if jp[0] == None and jp[1] != None or jp[0] != None and jp[1] == None:
+            pairs_includes_none.append((wid,)+jp)
+    #print pairs_includes_none
+    # Noneが片方だけのペアが３個以上あったら諦める
+    if len(pairs_includes_none) != 2:
+        print 'skipped {}'.format(name.encode('utf-8'))
+        continue
+    # 順に舐めてnodeを拾い集める
+    nodes = []
+    processed_ids = []
+    last_way = None
+    current_way = pairs_includes_none[0][0]
+    while True:
+        if current_way in processed_ids:
+            # 無限ループを回避
+            break
+        # nodeを積む（last_wayの方から順に）
+        # 結合先はlast_wayでないほうのway
+        if last_way == joined_pairs[current_way][0]:
+            # start
+            nodes += ways[current_way].values()
+            try:
+                next_way = joined_pairs[current_way][1][0]
+            except TypeError:
+                next_way = None
+        else:
+            # end
+            nodes += reversed(ways[current_way].values())
+            try:
+                next_way = joined_pairs[current_way][0][0]
+            except TypeError:
+                next_way = None
+        processed_ids.append(current_way)
+        last_way = current_way
+        current_way = next_way
+        if current_way == None:
+            break
+    print nodes
