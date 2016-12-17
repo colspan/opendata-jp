@@ -7,6 +7,8 @@ import argparse
 import csv
 from collections import OrderedDict
 
+import json
+
 p = argparse.ArgumentParser()
 
 p.add_argument('--roaddef', type=str, required=True) 
@@ -43,6 +45,7 @@ with open(args.roaddef, 'r') as f:
 
 conn.close()
 
+features = []
 for name, ways in names.items():
     # 各路線ごとに
     joined_pairs = {}
@@ -111,3 +114,21 @@ for name, ways in names.items():
         if current_way == None:
             break
     print nodes
+    feature = {
+        "type":"Feature",
+        "geometry":{
+            "type":"MultiPoint",
+            "coordinates": [[x['lon'], x['lat']] for x in nodes ]
+        },
+        "properties":{"name":name}
+    }
+    features.append(feature)
+
+geojson_obj = {
+    "type":"FeatureCollection",
+    "features":features
+}
+
+
+with open("output.json", "w") as f:
+    json.dump(geojson_obj, f)
