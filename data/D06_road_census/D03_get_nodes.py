@@ -11,7 +11,7 @@ import json
 
 p = argparse.ArgumentParser()
 
-p.add_argument('--roaddef', type=str, required=True) 
+p.add_argument('--roadnamedef', type=str, required=True) 
 p.add_argument('--osmdb',  type=str, required=True) 
 args = p.parse_args()
 
