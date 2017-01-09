@@ -92,7 +92,7 @@ function DownLd(size,file, path, mes){
     document.location.href = path;
 }
 var select_elements = document.getElementsByTagName('input');
-var f = (function(x){
+var f = (function(){
     var i=0;
     var f = function(){
         if(i<select_elements.length){
@@ -105,7 +105,7 @@ var f = (function(x){
         }
     }
     return f;
-})(select_elements);
+})();
 f();
 
 ```
