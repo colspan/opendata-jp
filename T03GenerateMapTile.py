@@ -138,7 +138,8 @@ class scheduleTileTasks(luigi.WrapperTask):
 class mainTask(luigi.WrapperTask):
     def requires(self):
         #yield scheduleTileTasks(database="./var/T00_population_mesh_third_half_mesh.db", target_name="population", query=u"SELECT * FROM population_mesh WHERE qkey = '{}'")
-        yield scheduleTileTasks(database="./var/T02_airport_distance_map.db", target_name="airport", query=u"SELECT * FROM airports WHERE qkey = '{}'")
+        yield scheduleTileTasks(database="./var/T02_hospital_distance_map_matanity_delivery.db", target_name="matanity_delivery", query=u"SELECT * FROM hospitals_matanity_delivery WHERE qkey = '{}' and ranking = 0")
+        #yield scheduleTileTasks(database="./var/T02_airport_distance_map.db", target_name="airport", query=u"SELECT * FROM airports WHERE qkey = '{}'")
 
 if __name__ == "__main__":
     luigi.run()#['mainTask', '--workers=5'])

@@ -50,11 +50,11 @@ import json
 import random
 
 ROUTE_URL_TEMPLATE1 = 'http://localhost:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
-ROUTE_URL_TEMPLATE2 = 'http://192.168.11.48:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
+ROUTE_URL_TEMPLATE2 = 'http://192.168.11.49:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
 
 def search_and_sort_places_by_duration(lat, lon, targets):
-    #route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*2 # 負荷分散
-    route_urls = [ROUTE_URL_TEMPLATE2]
+    route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*4 # 負荷分散
+    #route_urls = [ROUTE_URL_TEMPLATE1]
     results = []
     for i, row in enumerate(targets):
         server = random.choice(route_urls)
@@ -153,24 +153,26 @@ class generateDb(luigi.Task):
         conn = sqlite3.connect(self.output().fn)
         cur = conn.cursor()
         ddl = """CREATE TABLE IF NOT EXISTS {}(
-            qkey TEXT PRIMARY KEY,
+            qkey TEXT,
             latitude FLOAT,
             longtitude FLOAT,
+            ranking INTEGER,
             hospital_id INTEGER,
             duration FLOAT,
-            distance_path FLOAT,
-            distance_straight_line FLOAT
+            distance_path FLOAT
             )""".format(self.table_name)
         cur.execute(ddl)
+        ddl_index = "CREATE INDEX {}_index_qkey ON {}(qkey)".format(self.table_name, self.table_name)
+        cur.execute(ddl_index)
 
-        dml = """INSERT OR IGNORE INTO {}(
+        dml = """INSERT INTO {}(
                 'qkey',
                 'latitude',
                 'longtitude',
+                'ranking',
                 'hospital_id',
                 'duration',
-                'distance_path',
-                'distance_straight_line')
+                'distance_path')
                 VALUES (?, ?, ?, ?, ?, ?, ?)""".format(self.table_name)
 
         for tile_data_file in self.input():
@@ -183,22 +185,18 @@ class generateDb(luigi.Task):
             for img_y in range(0, size_y):
                 for img_x in range(0, size_x):
                     lat, lon = num2deg(tile_x + float(img_x)/size_x, tile_y + float(img_y)/size_y, zoom)
-                    # 最短の所要時間
-                    try:
-                        duration = result_data["duration"][img_y][img_x][0]['value']
-                        distance_path = result_data["distance_path"][img_y][img_x][0]['value']
-                        hospital_id = result_data["duration"][img_y][img_x][0]['id']
-                        distance_straight_line = result_data["distance_straight_line"][img_y][img_x][0]['value'] # 割り切り(本当はOSRMの結果から導出したい)
-                    except:
-                        duration = None
-                        distance_path = None
-                        hospital_id = None
-                        distance_straight_line = None
-                    if hospital_id == None:
-                        continue
                     qkey = quadkey.from_geo((lat,lon), QUADKEY_LEVEL).key
-                    cur.execute(dml, (qkey, lat, lon, hospital_id, duration, distance_path, distance_straight_line))
-
+                    # 所要時間をDBに登録する
+                    num = len(result_data["duration"][img_y][img_x])
+                    for i in range(num):
+                        try:
+                            duration = result_data["duration"][img_y][img_x][i]['value']
+                            distance_path = result_data["distance_path"][img_y][img_x][i]['value']
+                            hospital_id = result_data["duration"][img_y][img_x][i]['id']
+                            cur.execute(dml, (qkey, lat, lon, i, hospital_id, duration, distance_path))
+                        except:
+                            print "No distance / duration data at {}".format(i)
+                            continue
         conn.commit()
         conn.close()
             
