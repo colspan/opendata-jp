@@ -18,7 +18,6 @@ from PIL import Image, ImageDraw, ImageFont
 #        : 240 deg, 1.0, 0.5 # blue
 #      1 : 300 deg, 1.0, 0.5 # magenta
 #      0 : 300 deg, 1.0, 0.0 # transparent
-# Opacityは30分から120分まで線形で消えていく
 from colorsys import hls_to_rgb
 def get_color_population(value):
     hsl_hue = 300 - 240 * float(value) / 6200.0
@@ -42,14 +41,14 @@ def get_color_population(value):
 #  45分 : 240 deg, 1.0, 0.5 # blue
 #  60分 : 300 deg, 1.0, 0.5 # magenta
 # 120分 : 300 deg, 1.0, 0.0 # black
-# Opacityは30分から120分まで線形で消えていく
+# Opacityは30分から360分まで線形で消えていく
 def get_color(value):
     hsl_hue = float(value)/3600*(300-60)+60
     if hsl_hue > 300:
         # 超えていたら300になおす
         hsl_hue = 300
-    if value > 1800: # 30分を超えていたら120分まで線形で消えていく
-        opacity_ratio = 1.0 - float(value-1800)/5400
+    if value > 1800: # 30分を超えていたら360分まで線形で消えていく
+        opacity_ratio = 1.0 - float(value-1800)/(330*60)
         if opacity_ratio < 0:
             # 0を下回っていたら0にする
             opacity_ratio = 0.0
