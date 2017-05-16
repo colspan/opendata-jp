@@ -52,7 +52,7 @@ class DownloadTile(luigi.Task):
     y = luigi.IntParameter()
     z = luigi.IntParameter()
     def output(self):
-        extension = os.path.splitext(urlparse(self.baseUrl).path)[1]
+        extension = os.path.splitext(urlparse(self.baseUrl).path)[1].replace(".", "")
         return luigi.LocalTarget("./var/{}/{}/{}/{}.{}".format(self.baseName, self.z,self.x, self.y, extension))
     def run(self):
         url = self.baseUrl.format(**{"x":self.x, "y":self.y, "z":self.z})
