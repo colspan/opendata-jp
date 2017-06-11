@@ -3,7 +3,6 @@
 
 import sys
 import json
-import sqlite3
 import quadkey
 
 import numpy as np
@@ -97,16 +96,33 @@ def draw_matrix(input_array, filename):
 # ==============
 
 import luigi
+from luigi.contrib import sqla
+from sqlalchemy.types import *
 import re
-class resampleData(luigi.Task):
+class resampleData(sqla.CopyToTable):
     mesh_data = luigi.Parameter(default="./data/D00_population/population_mesh_third_half.csv")
     output_db = luigi.Parameter(default="./var/T00_third_half_mesh.db")
     table_name = luigi.Parameter(default="mesh_population")
     value_row_number = luigi.IntParameter(default=1)
     no_unit_value = luigi.BoolParameter(default=False)
-    def output(self):
-        return luigi.LocalTarget(self.output_db)
-    def run(self):
+    def __init__(self, *args, **kwargs):
+        super(sqla.CopyToTable, self).__init__(*args, **kwargs)
+        self.columns = [
+            (["qkey", String(32)], {"primary_key": True}),
+            (["latitude", Float()], {}),
+            (["longtitude", Float()], {}),
+            (["value", Float()], {}),
+        ]
+
+    @property
+    def connection_string(self):
+        return "sqlite:///{}".format(self.output_db)
+
+    @property
+    def table(self):
+        return self.table_name
+
+    def rows(self):
         # 3次メッシュデータ読み込み
         r = re.compile(r"[0-9]{8}")
         stat_third_mesh = {}
@@ -171,48 +187,23 @@ class resampleData(luigi.Task):
             # 値を正規化する
             quadkey_mesh = resampled_mesh * array_third_mesh.sum() / resampled_mesh.sum()
 
-        # DB準備
-        conn = sqlite3.connect(self.output().fn)
-        cur = conn.cursor()
-
-        # TABLE作成
-        ddl = """CREATE TABLE IF NOT EXISTS {}(
-            qkey TEXT PRIMARY KEY,
-            latitude FLOAT,
-            longtitude FLOAT,
-            value FLOAT
-            )""".format(self.table_name)
-        cur.execute(ddl)
-        # INDEX
-        #cur.execute("CREATE INDEX IF NOT EXISTS qkey_index ON {}(qkey)".format(self.table_name))
-        # 挿入用DML
-        dml = """INSERT OR IGNORE INTO {}(
-                'qkey',
-                'latitude',
-                'longtitude',
-                'value')
-                VALUES (?, ?, ?, ?)""".format(self.table_name)
-
-        # リサンプル後のメッシュデータのインデックスから緯度経度を計算する関数
-        index_to_deg = lambda i,j: (float(i)/pixel_nums[0]*(area_lat_max - area_lat_min)+area_lat_min, float(j)/pixel_nums[1]*(area_lon_max - area_lon_min)+area_lon_min)
+        # リサンプル後のメッシュデータのインデックスから緯度経度を計算する
+        pixel_top_left = quadkey.from_geo((area_lat_max, area_lon_min), 16).to_tile()
 
         sum_value = 0
         # リサンプル後のメッシュデータの各要素をループしてDBに保存
+        qkeys = []
         for lat_index, row in enumerate(quadkey_mesh):
             for lon_index, value in enumerate(row):
-                lat, lon = index_to_deg(lat_index, lon_index)
                 if value < value_limit:
                     continue
                 else:
                     sum_value += value
-                qkey =  quadkey.from_geo((lat,lon), 16).key
-                cur.execute(dml, (qkey, lat, lon, value))
-
+                qkey =  quadkey.from_tile((lat_index, pixel_nums[1] - lon_index), 16).key
+                exists = qkey in qkeys
+                qkeys.append(qkey)
+                yield (qkey, lat, lon, value)
         print sum_value
-
-        # DB を確定
-        conn.commit()
-        conn.close()
 
 class T00mainTask(luigi.WrapperTask):
     def requires(self):
