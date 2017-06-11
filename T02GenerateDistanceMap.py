@@ -82,7 +82,7 @@ TILE_SIZE = 256
 
 # -------------------------------------------
 
-import T00PopulationIndex
+import T00ResampleThirdMesh
 
 class generateDistanceEachTiles(luigi.Task):
     zoom = luigi.Parameter()
@@ -92,7 +92,7 @@ class generateDistanceEachTiles(luigi.Task):
     hospitals = luigi.ListParameter() # 病院名簿
     distance_threshold = luigi.FloatParameter(default=300.0) #300km以内の病院のみ
     def requires(self):
-        return T00PopulationIndex.T00mainTask()
+        return T00ResampleThirdMesh.T00mainTask()[0]
     def output(self):
         combination = {'zoom':self.zoom,'x':self.x,'y':self.y,'target':self.target_name}
         pkl_file = './var/tmp_T02_{target}_{zoom}_{x}_{y}.pkl'.format(**combination)
@@ -116,7 +116,7 @@ class generateDistanceEachTiles(luigi.Task):
 
                 ## 人口メッシュにデータが有る場合のみ続行する
                 qkey = quadkey.from_geo(current_pos, QUADKEY_LEVEL).key
-                cur.execute('select qkey from population_mesh where qkey = ?', (qkey,))
+                cur.execute('select qkey from mesh_population where qkey = ?', (qkey,))
                 if cur.fetchone() == None:
                     continue
 

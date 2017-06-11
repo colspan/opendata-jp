@@ -188,7 +188,8 @@ class resampleData(sqla.CopyToTable):
             quadkey_mesh = resampled_mesh * array_third_mesh.sum() / resampled_mesh.sum()
 
         # リサンプル後のメッシュデータのインデックスから緯度経度を計算する
-        pixel_top_left = quadkey.from_geo((area_lat_max, area_lon_min), 16).to_tile()
+        pixel_top_left = quadkey.from_geo((area_lat_max, area_lon_min), 16).to_tile()[0]
+        pixel_top_left = (pixel_top_left[0], pixel_top_left[1] - 128 + 17)
 
         sum_value = 0
         # リサンプル後のメッシュデータの各要素をループしてDBに保存
@@ -199,7 +200,7 @@ class resampleData(sqla.CopyToTable):
                     continue
                 else:
                     sum_value += value
-                qkey =  quadkey.from_tile((lat_index, pixel_nums[1] - lon_index), 16).key
+                qkey = str(quadkey.from_tile((lon_index + pixel_top_left[0], pixel_top_left[1] + pixel_nums[1] - lat_index), 16).key)
                 exists = qkey in qkeys
                 qkeys.append(qkey)
                 yield (qkey, lat, lon, value)

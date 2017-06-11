@@ -93,7 +93,7 @@ class generateTileImage(luigi.Task):
                 try:
                     c = cur.execute(self.query.format(qkey))
                     row = c.fetchone()
-                    print (row['qkey'], row[self.row_name])
+                    print (row['qkey'], row[self.row_name] , self.query.format(qkey))
                     value = row[self.row_name]
                 except:
                     value = self.null_value
@@ -133,7 +133,7 @@ class scheduleTileTasks(luigi.WrapperTask):
 
 class mainTask(luigi.WrapperTask):
     def requires(self):
-        yield scheduleTileTasks(database="./var/T00_third_half_mesh.db", target_name="population", query=u"SELECT * FROM population_mesh WHERE qkey = '{}'", row_name = "population", null_value = 0)
+        yield scheduleTileTasks(database="./var/T00_third_half_mesh.db", target_name="population", query=u"SELECT * FROM mesh_population WHERE qkey = '{}'", row_name = "population", null_value = 0)
         #yield scheduleTileTasks(database="./var/T02_hospital_distance_map_matanity_delivery.db", target_name="matanity_delivery", query=u"SELECT * FROM hospitals_matanity_delivery WHERE qkey = '{}' and ranking = 0", row_name = "duration", null_value = 9999999999)
         #yield scheduleTileTasks(database="./var/T02_airport_distance_map.db", target_name="airport", query=u"SELECT * FROM airports WHERE qkey = '{}' and ranking = 0", row_name = "duration", null_value = 9999999999)
 
