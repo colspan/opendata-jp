@@ -180,10 +180,9 @@ class mainTask(luigi.Task):
                 commune_id = pixel_info[0] * 100 + pixel_info[1]
                 commune_info = communes[commune_id]
                 tile = pixel_to_tile(x+pixel_nw[0], y+pixel_nw[1])
-                tile_x = tile[0][0] + float(tile[1][0])/256.0
-                tile_y = tile[0][1] + float(tile[1][1])/256.0
-                deg = num_to_deg(tile_x, tile_y, zoom)
-                qkey = quadkey.from_geo(deg, 16).key
+                tile_x = tile[0][0] * 256 + tile[1][0]
+                tile_y = tile[0][1] * 256 + tile[1][1]
+                qkey = quadkey.from_tile((tile_x, tile_y), 16).key
                 cur.execute(dml_cq, (qkey, commune_info["commune_id"]))
                 #print "{} {} {} {} {} {}".format(qkey, commune_info["commune"].encode('utf_8'), deg[0], deg[1],  tile_x, tile_y)
 
