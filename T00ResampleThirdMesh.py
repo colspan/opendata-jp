@@ -215,6 +215,27 @@ class T00mainTask(luigi.WrapperTask):
                 table_name = "mesh_population",
                 value_row_number = 1,
                 no_unit_value = False
+            ),
+            resampleData(
+                mesh_data = "./data/D00_population/population_mesh_third_half.csv",
+                output_db = "./var/T00_third_half_mesh.db",
+                table_name = "mesh_population_men",
+                value_row_number = 2,
+                no_unit_value = False
+            ),
+            resampleData(
+                mesh_data = "./data/D00_population/population_mesh_third_half.csv",
+                output_db = "./var/T00_third_half_mesh.db",
+                table_name = "mesh_population_women",
+                value_row_number = 3,
+                no_unit_value = False
+            ),
+            resampleData(
+                mesh_data = "./data/D07_evelation_usage/g04_hokkaido.csv",
+                output_db = "./var/T00_third_half_mesh.db",
+                table_name = "elevation",
+                value_row_number = 1,
+                no_unit_value = True
             )
         ]
         return tasks
