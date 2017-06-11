@@ -64,7 +64,7 @@ class T00mainTask(luigi.Task):
                 print quadkey.QuadKey(row["qkey"]).to_geo()
                 print nw_geo
                 print se_geo
-                print row["population"]
+                print row["duration"]
 
             coordinates = [
                 [nw_geo[1], nw_geo[0]],

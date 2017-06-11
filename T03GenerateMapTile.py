@@ -65,6 +65,8 @@ class generateTileImage(luigi.Task):
     database = luigi.Parameter()
     target_name = luigi.Parameter()
     query = luigi.Parameter()
+    row_name = luigi.Parameter()
+    null_value = luigi.Parameter()
     def output(self):
         return luigi.LocalTarget(self.img_file)
     def run(self):
@@ -91,17 +93,10 @@ class generateTileImage(luigi.Task):
                 try:
                     c = cur.execute(self.query.format(qkey))
                     row = c.fetchone()
-                    if self.target_name == "population":
-                        print (row['qkey'], row['population'])
-                        value = row['population']
-                    else:
-                        print (row['qkey'], row['duration'])
-                        value = row['duration']
+                    print (row['qkey'], row[self.row_name])
+                    value = row[self.row_name]
                 except:
-                    if self.target_name == "population":
-                        value = 0
-                    else:
-                        value = 9999999999
+                    value = self.null_value
                 if self.target_name == "population":
                     color = get_color_population(value)
                 else:
@@ -116,6 +111,8 @@ class scheduleTileTasks(luigi.WrapperTask):
     target_name = luigi.Parameter()
     database = luigi.Parameter()
     query = luigi.Parameter()
+    row_name = luigi.Parameter()
+    null_value = luigi.Parameter()
     def requires(self):
         zoom = ZOOM
         edge_nw_x, edge_nw_y = deg2num( *(EDGE_NW+(zoom,)) )
@@ -132,13 +129,13 @@ class scheduleTileTasks(luigi.WrapperTask):
                 dir_name = os.path.dirname(img_file)
                 if not os.path.exists(dir_name):
                     os.makedirs(dir_name)
-                yield generateTileImage(x=tile_x, y=tile_y, zoom=zoom, img_file=img_file, database=self.database, target_name=self.target_name, query=self.query)
+                yield generateTileImage(x=tile_x, y=tile_y, zoom=zoom, img_file=img_file, database=self.database, target_name=self.target_name, query=self.query, row_name=self.row_name, null_value=self.null_value)
 
 class mainTask(luigi.WrapperTask):
     def requires(self):
-        #yield scheduleTileTasks(database="./var/T00_population_mesh_third_half_mesh.db", target_name="population", query=u"SELECT * FROM population_mesh WHERE qkey = '{}'")
-        yield scheduleTileTasks(database="./var/T02_hospital_distance_map_matanity_delivery.db", target_name="matanity_delivery", query=u"SELECT * FROM hospitals_matanity_delivery WHERE qkey = '{}' and ranking = 0")
-        #yield scheduleTileTasks(database="./var/T02_airport_distance_map.db", target_name="airport", query=u"SELECT * FROM airports WHERE qkey = '{}'")
+        yield scheduleTileTasks(database="./var/T00_third_half_mesh.db", target_name="population", query=u"SELECT * FROM population_mesh WHERE qkey = '{}'", row_name = "population", null_value = 0)
+        #yield scheduleTileTasks(database="./var/T02_hospital_distance_map_matanity_delivery.db", target_name="matanity_delivery", query=u"SELECT * FROM hospitals_matanity_delivery WHERE qkey = '{}' and ranking = 0", row_name = "duration", null_value = 9999999999)
+        #yield scheduleTileTasks(database="./var/T02_airport_distance_map.db", target_name="airport", query=u"SELECT * FROM airports WHERE qkey = '{}' and ranking = 0", row_name = "duration", null_value = 9999999999)
 
 if __name__ == "__main__":
     luigi.run()#['mainTask', '--workers=5'])

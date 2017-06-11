@@ -49,7 +49,7 @@ class T00mainTask(luigi.Task):
         conn = sqlite3.connect(self.input_db)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        row = cur.execute(u"select * from population_mesh")
+        row = cur.execute(u"select * from mesh_population")
         i = 0
         for row in cur:
             tile_info = quadkey.QuadKey(row["qkey"]).to_tile()
@@ -64,7 +64,7 @@ class T00mainTask(luigi.Task):
                 print quadkey.QuadKey(row["qkey"]).to_geo()
                 print nw_geo
                 print se_geo
-                print row["population"]
+                print row["value"]
 
             coordinates = [
                 [nw_geo[1], nw_geo[0]],
@@ -81,7 +81,7 @@ class T00mainTask(luigi.Task):
                         [coordinates]
                     ]
                 },
-                "properties":{"cartodb_id":i,"value":row["population"]}
+                "properties":{"cartodb_id":i,"value":row["value"]}
             }
             features.append(feature)
             i+=1
