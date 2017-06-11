@@ -53,8 +53,8 @@ ROUTE_URL_TEMPLATE1 = 'http://localhost:5000/route/v1/driving/{start_long},{star
 ROUTE_URL_TEMPLATE2 = 'http://192.168.11.49:5000/route/v1/driving/{start_long},{start_lat};{end_long},{end_lat}?alternatives=true&steps=true'
 
 def search_and_sort_places_by_duration(lat, lon, targets):
-    route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*4 # 負荷分散
-    #route_urls = [ROUTE_URL_TEMPLATE1]
+    #route_urls = [ROUTE_URL_TEMPLATE1] + [ROUTE_URL_TEMPLATE2]*4 # 負荷分散
+    route_urls = [ROUTE_URL_TEMPLATE1]
     results = []
     for i, row in enumerate(targets):
         server = random.choice(route_urls)
@@ -92,7 +92,14 @@ class generateDistanceEachTiles(luigi.Task):
     hospitals = luigi.ListParameter() # 病院名簿
     distance_threshold = luigi.FloatParameter(default=300.0) #300km以内の病院のみ
     def requires(self):
-        return T00ResampleThirdMesh.T00mainTask()[0]
+        return T00ResampleThirdMesh.resampleData(
+                mesh_data = "./data/D00_population/population_mesh_third_half.csv",
+                output_db = "./var/T00_third_half_mesh.db",
+                table_name = "mesh_population",
+                value_row_number = 1,
+                no_unit_value = False
+            )
+
     def output(self):
         combination = {'zoom':self.zoom,'x':self.x,'y':self.y,'target':self.target_name}
         pkl_file = './var/tmp_T02_{target}_{zoom}_{x}_{y}.pkl'.format(**combination)
@@ -104,7 +111,7 @@ class generateDistanceEachTiles(luigi.Task):
         size_x, size_y = (IMG_X, IMG_Y)
         target_list = self.hospitals
 
-        conn = sqlite3.connect(self.input().fn)
+        conn = sqlite3.connect(self.input().connection_string.replace("sqlite:///", ""))
         cur = conn.cursor()
 
         result_data = {"zoom":zoom, "tile_x":tile_x, "tile_y":tile_y, "distance_straight_line":[[{} for i in range(size_x)] for j in range(size_y)], "distance_path":[[{} for i in range(size_x)] for j in range(size_y)], "duration":[[{} for i in range(size_x)] for j in range(size_y)]}
