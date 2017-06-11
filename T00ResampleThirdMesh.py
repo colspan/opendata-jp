@@ -177,7 +177,7 @@ class resampleData(sqla.CopyToTable):
         print array_third_mesh.sum()
         resampled_mesh = scipy.ndimage.zoom(array_third_mesh, resampling_ratio, order=0)
         # ゴミをゼロに丸める
-        value_limit = 0.01 / resampling_ratio[0] / resampling_ratio[1]
+        value_limit = 0.001 # 0.01 / resampling_ratio[0] / resampling_ratio[1]
         #resampled_mesh = resampled_mesh * (resampled_mesh < value_limit)
 
         if self.no_unit_value:
