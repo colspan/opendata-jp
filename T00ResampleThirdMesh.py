@@ -97,30 +97,36 @@ def draw_matrix(input_array, filename):
 # ==============
 
 import luigi
-class T00mainTask(luigi.Task):
+import re
+class resampleData(luigi.Task):
     mesh_data = luigi.Parameter(default="./data/D00_population/population_mesh_third_half.csv")
-    output_db = luigi.Parameter(default="./var/T00_population_mesh_third_half_mesh.db")
+    output_db = luigi.Parameter(default="./var/T00_third_half_mesh.db")
+    table_name = luigi.Parameter(default="mesh_population")
+    value_row_number = luigi.IntParameter(default=1)
+    no_unit_value = luigi.BoolParameter(default=False)
     def output(self):
         return luigi.LocalTarget(self.output_db)
     def run(self):
         # 3次メッシュデータ読み込み
-        sum_population = 0
-        stat_third_mesh_population = {}
+        r = re.compile(r"[0-9]{8}")
+        stat_third_mesh = {}
         with open(self.mesh_data, "r") as f:
             for i,line in enumerate(f):
                 row = line.rstrip().split(',')
                 mesh_code = row[0]
-                population = int(row[1])
+                if not r.match(mesh_code):
+                    continue
+                value = float(row[self.value_row_number])
                 lat, lon = mesh_code_to_latlng(mesh_code)
-                stat_third_mesh_population[mesh_code] = [mesh_code, population, lat, lon]
+                stat_third_mesh[mesh_code] = [mesh_code, value, lat, lon]
 
         # 緯度経度の秒数を求め、それぞれ最大最小を求める
-        area_lat_max = max(stat_third_mesh_population.values(), key=(lambda x : x[2]))[2]
-        area_lat_min = min(stat_third_mesh_population.values(), key=(lambda x : x[2]))[2]
-        area_lon_max = max(stat_third_mesh_population.values(), key=(lambda x : x[3]))[3]
-        area_lon_min = min(stat_third_mesh_population.values(), key=(lambda x : x[3]))[3]
-        lat_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[2]))[0] )[0]
-        lon_index_min = mesh_code_to_latlng_index( min(stat_third_mesh_population.values(), key=(lambda x : x[3]))[0] )[1]
+        area_lat_max = max(stat_third_mesh.values(), key=(lambda x : x[2]))[2]
+        area_lat_min = min(stat_third_mesh.values(), key=(lambda x : x[2]))[2]
+        area_lon_max = max(stat_third_mesh.values(), key=(lambda x : x[3]))[3]
+        area_lon_min = min(stat_third_mesh.values(), key=(lambda x : x[3]))[3]
+        lat_index_min = mesh_code_to_latlng_index( min(stat_third_mesh.values(), key=(lambda x : x[2]))[0] )[0]
+        lon_index_min = mesh_code_to_latlng_index( min(stat_third_mesh.values(), key=(lambda x : x[3]))[0] )[1]
         #print (area_lat_max,area_lat_min,area_lon_max,area_lon_min)
 
         # 位置計算関数作成 (度から秒に換算した上で割る, 1/2メッシュなので2を掛ける)
@@ -132,14 +138,14 @@ class T00mainTask(luigi.Task):
         #print mesh_nums
 
         # 統計値格納配列を準備する
-        array_third_mesh_population = np.zeros(mesh_nums[0]*mesh_nums[1]).reshape(mesh_nums[0],mesh_nums[1])
+        array_third_mesh = np.zeros(mesh_nums[0]*mesh_nums[1]).reshape(mesh_nums[0],mesh_nums[1])
 
         # 統計値代入
-        for x in stat_third_mesh_population.values():
+        for x in stat_third_mesh.values():
             lat_index , lon_index = mesh_code_to_latlng_index(x[0])
-            array_third_mesh_population[lat_index - lat_index_min, lon_index - lon_index_min] = x[1]
+            array_third_mesh[lat_index - lat_index_min, lon_index - lon_index_min] = x[1]
 
-        draw_matrix(array_third_mesh_population, './var/T00_mesh_code_map.png' )
+        draw_matrix(array_third_mesh, './var/T00_mesh_code_map_{}.png'.format(self.table_name) )
 
         # quadkey空間におけるピクセル数算出
         zoom = 8
@@ -148,39 +154,44 @@ class T00mainTask(luigi.Task):
         pixel_nums = (pixel_sw[1] - pixel_ne[1] + 1, pixel_ne[0] - pixel_sw[0] + 1) # h*w
         print pixel_nums
         # リサンプリング比率計算
-        zoom_ratio = (float(pixel_nums[0])/float(mesh_nums[0]-1),float(pixel_nums[1])/float(mesh_nums[1]-1))
-        print zoom_ratio
+        resampling_ratio = (float(pixel_nums[0])/float(mesh_nums[0]-1),float(pixel_nums[1])/float(mesh_nums[1]-1))
+        print resampling_ratio
 
         # リサンプリング実行
-        print array_third_mesh_population.sum()
-        resampled_mesh = scipy.ndimage.zoom(array_third_mesh_population,zoom_ratio,order=0)
+        print array_third_mesh.sum()
+        resampled_mesh = scipy.ndimage.zoom(array_third_mesh, resampling_ratio, order=0)
         # ゴミをゼロに丸める
-        value_limit = 0.01 / zoom_ratio[0] / zoom_ratio[1]
+        value_limit = 0.01 / resampling_ratio[0] / resampling_ratio[1]
         #resampled_mesh = resampled_mesh * (resampled_mesh < value_limit)
-        # 値を正規化する
-        quadkey_mesh = resampled_mesh * array_third_mesh_population.sum() / resampled_mesh.sum()
+
+        if self.no_unit_value:
+            # 単位のない値(割合等)は値を正規化しない
+            quadkey_mesh = resampled_mesh
+        else:
+            # 値を正規化する
+            quadkey_mesh = resampled_mesh * array_third_mesh.sum() / resampled_mesh.sum()
 
         # DB準備
         conn = sqlite3.connect(self.output().fn)
         cur = conn.cursor()
 
         # TABLE作成
-        ddl = """CREATE TABLE IF NOT EXISTS population_mesh(
+        ddl = """CREATE TABLE IF NOT EXISTS {}(
             qkey TEXT PRIMARY KEY,
             latitude FLOAT,
             longtitude FLOAT,
-            population INTEGER
-            )"""
+            value FLOAT
+            )""".format(self.table_name)
         cur.execute(ddl)
         # INDEX
-        #cur.execute("CREATE INDEX IF NOT EXISTS qkey_index ON population_mesh(qkey)")
+        #cur.execute("CREATE INDEX IF NOT EXISTS qkey_index ON {}(qkey)".format(self.table_name))
         # 挿入用DML
-        dml = """INSERT OR IGNORE INTO population_mesh(
+        dml = """INSERT OR IGNORE INTO {}(
                 'qkey',
                 'latitude',
                 'longtitude',
-                'population')
-                VALUES (?, ?, ?, ?)"""
+                'value')
+                VALUES (?, ?, ?, ?)""".format(self.table_name)
 
         # リサンプル後のメッシュデータのインデックスから緯度経度を計算する関数
         index_to_deg = lambda i,j: (float(i)/pixel_nums[0]*(area_lat_max - area_lat_min)+area_lat_min, float(j)/pixel_nums[1]*(area_lon_max - area_lon_min)+area_lon_min)
@@ -202,6 +213,19 @@ class T00mainTask(luigi.Task):
         # DB を確定
         conn.commit()
         conn.close()
+
+class T00mainTask(luigi.WrapperTask):
+    def requires(self):
+        tasks = [
+            resampleData(
+                mesh_data = "./data/D00_population/population_mesh_third_half.csv",
+                output_db = "./var/T00_third_half_mesh.db",
+                table_name = "mesh_population",
+                value_row_number = 1,
+                no_unit_value = False
+            )
+        ]
+        return tasks
 
 if __name__ == "__main__":
     luigi.run(['T00mainTask', '--workers=1', '--local-scheduler'])
