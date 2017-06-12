@@ -158,8 +158,13 @@ class resampleData(sqla.CopyToTable):
 
         # 統計値代入
         for x in stat_third_mesh.values():
+            current_mesh_code = x[0]
             lat_index , lon_index = mesh_code_to_latlng_index(x[0])
             array_third_mesh[lat_index - lat_index_min, lon_index - lon_index_min] = x[1]
+            if(len(current_mesh_code) == 8):
+                array_third_mesh[lat_index - lat_index_min - 1, lon_index - lon_index_min] = x[1]
+                array_third_mesh[lat_index - lat_index_min, lon_index - lon_index_min - 1] = x[1]
+                array_third_mesh[lat_index - lat_index_min - 1, lon_index - lon_index_min - 1] = x[1]
 
         draw_matrix(array_third_mesh, './var/T00_mesh_code_map_{}.png'.format(self.table_name) )
 
