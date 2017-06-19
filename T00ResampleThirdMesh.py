@@ -108,7 +108,7 @@ class resampleData(sqla.CopyToTable):
     def __init__(self, *args, **kwargs):
         super(sqla.CopyToTable, self).__init__(*args, **kwargs)
         self.columns = [
-            (["qkey", String(32)], {"primary_key": True}),
+            (["qkey", String(32)], {"index": True}),
             (["latitude", Float()], {}),
             (["longtitude", Float()], {}),
             (["value", Float()], {}),
@@ -192,9 +192,8 @@ class resampleData(sqla.CopyToTable):
             # 値を正規化する
             quadkey_mesh = resampled_mesh * array_third_mesh.sum() / resampled_mesh.sum()
 
-        # リサンプル後のメッシュデータのインデックスから緯度経度を計算する
-        pixel_top_left = quadkey.from_geo((area_lat_max, area_lon_min), 16).to_tile()[0]
-        pixel_top_left = (pixel_top_left[0], pixel_top_left[1] - 128 + 17)
+        # リサンプル後のメッシュデータのインデックスから緯度経度を計算する関数
+        index_to_deg = lambda i,j: (float(i)/pixel_nums[0]*(area_lat_max - area_lat_min)+area_lat_min, float(j)/pixel_nums[1]*(area_lon_max - area_lon_min)+area_lon_min)
 
         sum_value = 0
         # リサンプル後のメッシュデータの各要素をループしてDBに保存
@@ -205,10 +204,14 @@ class resampleData(sqla.CopyToTable):
                     continue
                 else:
                     sum_value += value
-                qkey = str(quadkey.from_tile((lon_index + pixel_top_left[0], pixel_top_left[1] + pixel_nums[1] - lat_index), 16).key)
+                lat, lon = index_to_deg(lat_index, lon_index)
+                qkey =  quadkey.from_geo((lat,lon), 16).key
                 exists = qkey in qkeys
                 qkeys.append(qkey)
-                yield (qkey, lat, lon, value)
+                try:
+                    yield (qkey, lat, lon, value)
+                except:
+                    continue
         print sum_value
 
 class T00mainTask(luigi.WrapperTask):
