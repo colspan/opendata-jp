@@ -193,7 +193,7 @@ class resampleData(sqla.CopyToTable):
             quadkey_mesh = resampled_mesh * array_third_mesh.sum() / resampled_mesh.sum()
 
         # リサンプル後のメッシュデータのインデックスから緯度経度を計算する関数
-        index_to_deg = lambda i,j: (float(i)/pixel_nums[0]*(area_lat_max - area_lat_min)+area_lat_min, float(j)/pixel_nums[1]*(area_lon_max - area_lon_min)+area_lon_min)
+        index_to_deg = lambda i,j: (float(i+1)/pixel_nums[0]*(area_lat_max - area_lat_min)+area_lat_min, float(j+1)/pixel_nums[1]*(area_lon_max - area_lon_min)+area_lon_min)
 
         sum_value = 0
         # リサンプル後のメッシュデータの各要素をループしてDBに保存
