@@ -125,6 +125,16 @@ class mainTask(luigi.Task):
         # キーマップ用画像作成
         img = Image.new('RGBA', img_size, (255, 255, 0, 255))
         draw = ImageDraw.Draw(img)
+        # 太く塗る
+        for feature in hokkaido_geojson["features"]:
+            coordinates = [(x[1], x[0]) for x in feature["geometry"]["coordinates"][0]]
+            projected_coordinates = [sub_offset(deg_to_pixel_coordinates(*(x+(zoom,))), pixel_nw) for x in coordinates]
+            commune_id = int(feature["properties"]["N03_007"])
+            r = int(commune_id/100)
+            g = commune_id % 100
+            draw.line(projected_coordinates, fill=(r,g,255,255), width=3)
+
+        # 細く塗る
         for feature in hokkaido_geojson["features"]:
             coordinates = [(x[1], x[0]) for x in feature["geometry"]["coordinates"][0]]
             projected_coordinates = [sub_offset(deg_to_pixel_coordinates(*(x+(zoom,))), pixel_nw) for x in coordinates]
@@ -132,6 +142,7 @@ class mainTask(luigi.Task):
             r = int(commune_id/100)
             g = commune_id % 100
             draw.polygon(projected_coordinates, fill=(r,g,255,255))
+
 
         img.save( self.output().fn + '.png', 'PNG')
 
