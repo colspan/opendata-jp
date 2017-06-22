@@ -13,8 +13,8 @@ db_file = "../var/T99_merged.db"
 tmp_out_file = "../var/A03_tmp_{}.csv"
 out_file = "../var/A03_population_histgram_of_each_commune_agg_by_duration_matanity_delivery.csv"
 target_table = "hospitals_matanity_delivery"
-base_query = "select sum(p.population) from {} as m inner join (select q.qkey, population from population_mesh as pm inner join  (select * from commune_qkey as cq inner join communes as c on c.commune_id = cq.commune_id where c.commune = ?) as q on pm.qkey = q.qkey) as p on p.qkey = m.qkey".format(target_table)
-population_query = "select sum(p.population) from (select q.qkey, population from population_mesh as pm inner join  (select * from commune_qkey as cq inner join communes as c on c.commune_id = cq.commune_id where c.commune = ?) as q on pm.qkey = q.qkey) as p"
+base_query = "select sum(p.population) from {} as m inner join (select q.qkey, pm.value as population from mesh_population as pm inner join  (select * from commune_qkey as cq inner join communes as c on c.commune_id = cq.commune_id where c.commune = ?) as q on pm.qkey = q.qkey) as p on p.qkey = m.qkey".format(target_table)
+population_query = "select sum(p.population) from (select q.qkey, pm.value as population from mesh_population as pm inner join  (select * from commune_qkey as cq inner join communes as c on c.commune_id = cq.commune_id where c.commune = ?) as q on pm.qkey = q.qkey) as p"
 
 DURATION_BEGIN = 0
 DURATION_END = 360
@@ -38,7 +38,7 @@ class calc_histgram(luigi.Task):
         for row in cur:
             population = row[0]
         # 時間別人口取得
-        query = base_query + " where m.duration < ? and m.duration >= ?"
+        query = base_query + " where m.duration < ? and m.duration >= ? and m.ranking = 0"
         print self.commune
         durations = []
         for duration in duration_candidates:

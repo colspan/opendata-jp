@@ -14,7 +14,7 @@ out_file = "../var/A02_population_of_each_commune_agg_by_duration_matanity_deliv
 conn = sqlite3.connect(db_file)
 cur = conn.cursor()
 
-query = u"select sum(p.population), avg(m.duration), max(m.duration), min(m.duration) from hospitals_matanity_delivery as m inner join (select q.qkey, population from population_mesh as pm inner join  (select * from commune_qkey as cq inner join communes as c on c.commune_id = cq.commune_id where c.commune = ?) as q on pm.qkey = q.qkey) as p on p.qkey = m.qkey;"
+query = u"select sum(p.population), avg(m.duration), max(m.duration), min(m.duration) from hospitals_matanity_delivery as m inner join (select q.qkey, population from population_mesh as pm inner join  (select * from commune_qkey as cq inner join communes as c on c.commune_id = cq.commune_id where c.commune = ?) as q on pm.qkey = q.qkey) as p on p.qkey = m.qkey where m.ranking = 0;"
 
 def print_record(f, name, row):
     for row in cur:
